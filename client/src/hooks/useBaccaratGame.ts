@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { 
   Card, 
   createDeck, 
@@ -39,14 +39,15 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
 
   // Reshuffle if deck is low
   useEffect(() => {
-    if (deck.length < 20 && deck.length > 0) {
+    if (deck.length < 20 && deck.length > 0 && gameStatus === 'betting') {
       setDeck(createDeck(8));
     }
-  }, [deck.length]);
+  }, [deck.length, gameStatus]);
 
   const placeBet = (type: keyof BetState, amount: number) => {
     if (gameStatus !== 'betting') return;
     if (balance < amount) return; // Not enough funds
+    if (amount <= 0) return;
 
     setBalance(prev => prev - amount);
     setCurrentBets(prev => ({
@@ -58,8 +59,10 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
   const clearBets = () => {
     if (gameStatus !== 'betting') return;
     const totalBet = currentBets.player + currentBets.banker + currentBets.tie;
-    setBalance(prev => prev + totalBet);
-    setCurrentBets({ player: 0, banker: 0, tie: 0 });
+    if (totalBet > 0) {
+      setBalance(prev => prev + totalBet);
+      setCurrentBets({ player: 0, banker: 0, tie: 0 });
+    }
   };
 
   const dealCard = async (target: HandType, currentDeck: Card[]) => {
@@ -134,6 +137,7 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
   
   // Robust Game Loop
   const runGameSequence = useCallback(async () => {
+    if (gameStatus !== 'betting') return;
     if (currentBets.player === 0 && currentBets.banker === 0 && currentBets.tie === 0) return;
     
     setGameStatus('dealing');
@@ -144,7 +148,12 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     setBankerScore(0);
     setLastWinAmount(0);
 
-    const localDeck = [...deck];
+    // Use current deck state
+    let localDeck = [...deck];
+    if (localDeck.length < 4) {
+      localDeck = createDeck(8);
+      setDeck(localDeck);
+    }
     const pHand: Card[] = [];
     const bHand: Card[] = [];
 
@@ -232,7 +241,21 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     setBalance(prev => prev + winAmount);
     setLastWinAmount(winAmount);
 
-  }, [deck, currentBets]);
+    // Auto-reset for next game after 2.5 seconds
+    const resetTimer = setTimeout(() => {
+      setGameStatus('betting');
+      setWinner(null);
+      setPlayerHand([]);
+      setBankerHand([]);
+      setPlayerScore(0);
+      setBankerScore(0);
+      setCurrentBets({ player: 0, banker: 0, tie: 0 });
+      setLastWinAmount(0);
+    }, 2500);
+    
+    return () => clearTimeout(resetTimer);
+
+  }, [deck, currentBets, gameStatus, initialBalance]);
 
   const resetGame = () => {
     setGameStatus('betting');
@@ -244,6 +267,8 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     setLastWinAmount(0);
     setCurrentBets({ player: 0, banker: 0, tie: 0 });
     setBalance(initialBalance);
+    // Reshuffle deck
+    setDeck(createDeck(8));
   };
 
   const setInitialBalance = (newBalance: number) => {
@@ -256,6 +281,8 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     setBankerScore(0);
     setLastWinAmount(0);
     setCurrentBets({ player: 0, banker: 0, tie: 0 });
+    // Reshuffle deck for fresh start
+    setDeck(createDeck(8));
   };
 
   return {
