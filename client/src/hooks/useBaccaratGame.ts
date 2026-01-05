@@ -44,6 +44,24 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     }
   }, [deck.length, gameStatus]);
 
+  // Auto-reset game after result is shown
+  useEffect(() => {
+    if (gameStatus === 'finished' && winner) {
+      const resetTimer = setTimeout(() => {
+        setGameStatus('betting');
+        setWinner(null);
+        setPlayerHand([]);
+        setBankerHand([]);
+        setPlayerScore(0);
+        setBankerScore(0);
+        setCurrentBets({ player: 0, banker: 0, tie: 0 });
+        setLastWinAmount(0);
+      }, 2500);
+      
+      return () => clearTimeout(resetTimer);
+    }
+  }, [gameStatus, winner]);
+
   const placeBet = (type: keyof BetState, amount: number) => {
     if (gameStatus !== 'betting') return;
     if (balance < amount) return; // Not enough funds
@@ -241,20 +259,6 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     setBalance(prev => prev + winAmount);
     setLastWinAmount(winAmount);
 
-    // Auto-reset for next game after 2.5 seconds
-    const resetTimer = setTimeout(() => {
-      setGameStatus('betting');
-      setWinner(null);
-      setPlayerHand([]);
-      setBankerHand([]);
-      setPlayerScore(0);
-      setBankerScore(0);
-      setCurrentBets({ player: 0, banker: 0, tie: 0 });
-      setLastWinAmount(0);
-    }, 2500);
-    
-    return () => clearTimeout(resetTimer);
-
   }, [deck, currentBets, gameStatus, initialBalance]);
 
   const resetGame = () => {
@@ -271,6 +275,17 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     setDeck(createDeck(8));
   };
 
+  const nextRound = () => {
+    setGameStatus('betting');
+    setWinner(null);
+    setPlayerHand([]);
+    setBankerHand([]);
+    setPlayerScore(0);
+    setBankerScore(0);
+    setCurrentBets({ player: 0, banker: 0, tie: 0 });
+    setLastWinAmount(0);
+  };
+
   const setInitialBalance = (newBalance: number) => {
     setBalance(newBalance);
     setGameStatus('betting');
@@ -283,7 +298,7 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     setCurrentBets({ player: 0, banker: 0, tie: 0 });
     // Reshuffle deck for fresh start
     setDeck(createDeck(8));
-  };
+  }
 
   return {
     deck,
@@ -301,6 +316,7 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     clearBets,
     startGame: runGameSequence,
     resetGame,
+    nextRound,
     setInitialBalance
   };
 }
