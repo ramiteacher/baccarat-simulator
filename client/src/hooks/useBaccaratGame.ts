@@ -16,6 +16,16 @@ export interface BetState {
   tie: number;
 }
 
+export interface BetRecord {
+  id: string;
+  playerBet: number;
+  bankerBet: number;
+  tieBet: number;
+  winner: Winner;
+  payout: number;
+  totalBet: number;
+}
+
 const DEAL_DELAY = 800; // ms between cards
 
 export function useBaccaratGame(initialBalance: number = 1000000) {
@@ -27,6 +37,7 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
   const [gameStatus, setGameStatus] = useState<'betting' | 'dealing' | 'finished'>('betting');
   const [winner, setWinner] = useState<Winner | null>(null);
   const [history, setHistory] = useState<Winner[]>([]);
+  const [betRecords, setBetRecords] = useState<BetRecord[]>([]);
   
   const [balance, setBalance] = useState(initialBalance);
   const [currentBets, setCurrentBets] = useState<BetState>({ player: 0, banker: 0, tie: 0 });
@@ -259,6 +270,18 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     setBalance(prev => prev + winAmount);
     setLastWinAmount(winAmount);
 
+    // 배팅 기록 저장
+    const record: BetRecord = {
+      id: Date.now().toString(),
+      playerBet: currentBets.player,
+      bankerBet: currentBets.banker,
+      tieBet: currentBets.tie,
+      winner: result,
+      payout: winAmount,
+      totalBet: currentBets.player + currentBets.banker + currentBets.tie
+    };
+    setBetRecords(prev => [...prev, record]);
+
   }, [deck, currentBets, gameStatus, initialBalance]);
 
   const resetGame = () => {
@@ -271,6 +294,7 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     setLastWinAmount(0);
     setCurrentBets({ player: 0, banker: 0, tie: 0 });
     setBalance(initialBalance);
+    setBetRecords([]);
     // Reshuffle deck
     setDeck(createDeck(8));
   };
@@ -296,6 +320,7 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     setBankerScore(0);
     setLastWinAmount(0);
     setCurrentBets({ player: 0, banker: 0, tie: 0 });
+    setBetRecords([]);
     // Reshuffle deck for fresh start
     setDeck(createDeck(8));
   }
@@ -312,6 +337,7 @@ export function useBaccaratGame(initialBalance: number = 1000000) {
     balance,
     currentBets,
     lastWinAmount,
+    betRecords,
     placeBet,
     clearBets,
     startGame: runGameSequence,

@@ -3,11 +3,13 @@ import { useBaccaratGame } from '@/hooks/useBaccaratGame';
 import { PlayingCard } from '@/components/PlayingCard';
 import { Chip } from '@/components/Chip';
 import { Roadmap } from '@/components/Roadmap';
+import { BettingHistory } from '@/components/BettingHistory';
 import { InitialBalanceDialog } from '@/components/InitialBalanceDialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Trophy, AlertCircle, Settings } from 'lucide-react';
+import { RefreshCw, Trophy, AlertCircle, Settings, Volume2, VolumeX } from 'lucide-react';
+import { soundManager } from '@/lib/sounds';
 
 export default function Home() {
   const [initialBalance, setInitialBalance] = useState(1000000);
@@ -24,12 +26,15 @@ export default function Home() {
     balance,
     currentBets,
     lastWinAmount,
+    betRecords,
     placeBet,
     clearBets,
     startGame,
     resetGame,
     setInitialBalance: setGameBalance
   } = useBaccaratGame(initialBalance);
+
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
 
   const [selectedChip, setSelectedChip] = useState(1000);
   const chipValues = [1000, 5000, 10000, 50000, 100000, 500000];
@@ -42,12 +47,39 @@ export default function Home() {
 
   const handleBet = (type: 'player' | 'banker' | 'tie') => {
     placeBet(type, selectedChip);
+    soundManager.chipPlace();
+  };
+
+  const handleStartGame = () => {
+    soundManager.dealStart();
+    startGame();
+  };
+
+  const toggleSound = () => {
+    const newMuted = soundManager.toggle();
+    setIsSoundMuted(newMuted);
   };
 
   const handleResetGame = () => {
     resetGame();
     setShowBalanceDialog(true);
   };
+
+  // 결과에 따른 사운드 재생
+  useEffect(() => {
+    if (winner) {
+      const delay = setTimeout(() => {
+        if (winner === 'player') {
+          soundManager.victory();
+        } else if (winner === 'banker') {
+          soundManager.victory();
+        } else if (winner === 'tie') {
+          soundManager.tie();
+        }
+      }, 500);
+      return () => clearTimeout(delay);
+    }
+  }, [winner]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground overflow-hidden font-sans">
@@ -63,7 +95,18 @@ export default function Home() {
           <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center font-bold text-black">B</div>
           <h1 className="font-bold text-lg tracking-wider hidden sm:block">BACCARAT <span className="text-primary font-light">SIMULATOR</span></h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleSound}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            title={isSoundMuted ? '사운드 켜기' : '사운드 끄기'}
+          >
+            {isSoundMuted ? (
+              <VolumeX className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+            ) : (
+              <Volume2 className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+            )}
+          </button>
           <button
             onClick={() => setShowBalanceDialog(true)}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -252,15 +295,18 @@ export default function Home() {
             {/* Action Buttons */}
             <div className="flex items-center justify-between gap-4">
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={clearBets}
-                  disabled={gameStatus !== 'betting' || (currentBets.player === 0 && currentBets.banker === 0 && currentBets.tie === 0)}
-                  className="border-red-500/50 text-red-400 hover:bg-red-950/50"
-                >
-                  Clear
-                </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  clearBets();
+                  soundManager.chipRemove();
+                }}
+                disabled={gameStatus !== 'betting' || (currentBets.player === 0 && currentBets.banker === 0 && currentBets.tie === 0)}
+                className="border-red-500/50 text-red-400 hover:bg-red-950/50"
+              >
+                Clear
+              </Button>
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -275,7 +321,7 @@ export default function Home() {
 
               <Button
                 size="lg"
-                onClick={startGame}
+                onClick={handleStartGame}
                 disabled={gameStatus !== 'betting' || (currentBets.player === 0 && currentBets.banker === 0 && currentBets.tie === 0)}
                 className={cn(
                   "w-full max-w-xs font-bold text-lg tracking-widest transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]",
@@ -293,10 +339,13 @@ export default function Home() {
         </div>
 
         {/* Roadmap Overlay (Desktop: Right Side) */}
-        <div className="absolute top-20 right-4 z-10 hidden lg:block w-64">
-          <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-lg p-2">
+        <div className="absolute top-20 right-4 z-10 hidden lg:flex gap-3 h-96">
+          <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-lg p-2 w-64 overflow-hidden">
             <h3 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wider">Roadmap (Bead Plate)</h3>
             <Roadmap history={history} />
+          </div>
+          <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-lg w-80 overflow-hidden flex flex-col">
+            <BettingHistory records={betRecords} maxRecords={15} />
           </div>
         </div>
 
