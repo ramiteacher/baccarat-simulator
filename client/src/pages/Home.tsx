@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBaccaratGame } from '@/hooks/useBaccaratGame';
 import { PlayingCard } from '@/components/PlayingCard';
 import { Chip } from '@/components/Chip';
 import { Roadmap } from '@/components/Roadmap';
+import { InitialBalanceDialog } from '@/components/InitialBalanceDialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Trophy, AlertCircle } from 'lucide-react';
+import { RefreshCw, Trophy, AlertCircle, Settings } from 'lucide-react';
 
 export default function Home() {
+  const [initialBalance, setInitialBalance] = useState(1000000);
+  const [showBalanceDialog, setShowBalanceDialog] = useState(true);
+  
   const {
     playerHand,
     bankerHand,
@@ -23,18 +27,36 @@ export default function Home() {
     placeBet,
     clearBets,
     startGame,
-    resetGame
-  } = useBaccaratGame();
+    resetGame,
+    setInitialBalance: setGameBalance
+  } = useBaccaratGame(initialBalance);
 
   const [selectedChip, setSelectedChip] = useState(1000);
   const chipValues = [1000, 5000, 10000, 50000, 100000, 500000];
+
+  const handleInitialBalance = (amount: number) => {
+    setInitialBalance(amount);
+    setGameBalance(amount);
+    setShowBalanceDialog(false);
+  };
 
   const handleBet = (type: 'player' | 'banker' | 'tie') => {
     placeBet(type, selectedChip);
   };
 
+  const handleResetGame = () => {
+    resetGame();
+    setShowBalanceDialog(true);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground overflow-hidden font-sans">
+      {/* Initial Balance Dialog */}
+      <InitialBalanceDialog 
+        isOpen={showBalanceDialog} 
+        onConfirm={handleInitialBalance}
+      />
+
       {/* Header */}
       <header className="h-14 bg-black/50 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 z-10">
         <div className="flex items-center gap-2">
@@ -42,6 +64,13 @@ export default function Home() {
           <h1 className="font-bold text-lg tracking-wider hidden sm:block">BACCARAT <span className="text-primary font-light">SIMULATOR</span></h1>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowBalanceDialog(true)}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            title="시작금액 변경"
+          >
+            <Settings className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+          </button>
           <div className="flex flex-col items-end">
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Balance</span>
             <span className="font-mono font-bold text-lg text-yellow-400">₩ {balance.toLocaleString()}</span>
@@ -235,7 +264,7 @@ export default function Home() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={resetGame}
+                  onClick={handleResetGame}
                   disabled={gameStatus === 'dealing'}
                   className="border-white/20 text-white/70 hover:bg-white/10"
                 >
@@ -263,8 +292,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Roadmap Overlay (Desktop: Right Side, Mobile: Top/Modal? Let's put it floating top right for now or inline) */}
-        {/* Let's put it as a floating panel on desktop, or collapsible */}
+        {/* Roadmap Overlay (Desktop: Right Side) */}
         <div className="absolute top-20 right-4 z-10 hidden lg:block w-64">
           <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-lg p-2">
             <h3 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wider">Roadmap (Bead Plate)</h3>

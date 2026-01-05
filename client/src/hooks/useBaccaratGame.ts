@@ -16,10 +16,9 @@ export interface BetState {
   tie: number;
 }
 
-const INITIAL_BALANCE = 1000000; // 1,000,000 KRW start
 const DEAL_DELAY = 800; // ms between cards
 
-export function useBaccaratGame() {
+export function useBaccaratGame(initialBalance: number = 1000000) {
   const [deck, setDeck] = useState<Card[]>([]);
   const [playerHand, setPlayerHand] = useState<Card[]>([]);
   const [bankerHand, setBankerHand] = useState<Card[]>([]);
@@ -29,7 +28,7 @@ export function useBaccaratGame() {
   const [winner, setWinner] = useState<Winner | null>(null);
   const [history, setHistory] = useState<Winner[]>([]);
   
-  const [balance, setBalance] = useState(INITIAL_BALANCE);
+  const [balance, setBalance] = useState(initialBalance);
   const [currentBets, setCurrentBets] = useState<BetState>({ player: 0, banker: 0, tie: 0 });
   const [lastWinAmount, setLastWinAmount] = useState(0);
 
@@ -244,6 +243,19 @@ export function useBaccaratGame() {
     setBankerScore(0);
     setLastWinAmount(0);
     setCurrentBets({ player: 0, banker: 0, tie: 0 });
+    setBalance(initialBalance);
+  };
+
+  const setInitialBalance = (newBalance: number) => {
+    setBalance(newBalance);
+    setGameStatus('betting');
+    setWinner(null);
+    setPlayerHand([]);
+    setBankerHand([]);
+    setPlayerScore(0);
+    setBankerScore(0);
+    setLastWinAmount(0);
+    setCurrentBets({ player: 0, banker: 0, tie: 0 });
   };
 
   return {
@@ -261,6 +273,7 @@ export function useBaccaratGame() {
     placeBet,
     clearBets,
     startGame: runGameSequence,
-    resetGame
+    resetGame,
+    setInitialBalance
   };
 }
