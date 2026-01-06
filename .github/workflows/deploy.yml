@@ -32,11 +32,10 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        # package.json의 "packageManager" 버전 사용
 
       - name: Install dependencies
-        run: pnpm install
-        # 로컬 불가 환경 → frozen-lockfile 사용 안 함
+        run: pnpm install --no-frozen-lockfile
+        # 🔥 CI 기본 frozen 강제 해제
 
       - name: Build
         run: pnpm build
