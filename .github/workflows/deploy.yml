@@ -31,10 +31,12 @@ jobs:
           node-version: 20
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4   # ✅ version 제거
+        uses: pnpm/action-setup@v4
+        # package.json의 "packageManager" 버전 사용
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
+        # 로컬 불가 환경 → frozen-lockfile 사용 안 함
 
       - name: Build
         run: pnpm build
